@@ -3,6 +3,7 @@
 #누가 몇장 먹었는지 보여주기
 #게임전략 구현
 
+
 print('♦️ ♠️ ♥️ ♣️')
 print('Rule')
 print('♠️  : S, ♦️  : D, ♣️  : C, ♥️  : H, joker = joker')
@@ -215,10 +216,15 @@ class Player:
         else:
             return 'player'
     
-    def choose_friend(self, giru): #프렌 부르기
+    def choose_friend(self, giru, Players): #프렌 부르기
         global friend_call
         while True:
             friend_call = input('choose friend:')
+            
+            for i in Players:
+                if i.name == friend_call:
+                    return friend_call
+            
             if friend_call in cardlist:
                 break
             else:
@@ -337,7 +343,7 @@ class BOT:
         else:
             return self.name
     
-    def choose_friend(self, giru):#봇이 프렌 부르기
+    def choose_friend(self, giru, Players):#봇이 프렌 부르기
         global friend_call
         deck = Deck(self.deck)
         #기루 반영
@@ -677,7 +683,7 @@ def gameready5():
     king.mode = 2
     (giru, target_num) = king.grab(giru, target_num, t[5])
     
-    friend_call = king.choose_friend(giru)
+    friend_call = king.choose_friend(giru, Players)
     
     
     return (king, friend_call, giru, target_num)
@@ -775,7 +781,7 @@ def gameready6(): #6마 게임 준비
 
 
     
-    friend_call = king.choose_friend(giru)
+    friend_call = king.choose_friend(giru, Players)
     
     return (king, friend_call, giru, target_num)
 
@@ -785,6 +791,10 @@ king, friend_call, giru, target_num = gameready()
 
 #프렌 반영
 friend = -1
+if friend_call[0] == 'b':
+    for i in Players:
+        if i.name == friend_call:
+            friend = i
 for j in range(5):
     if friend_call in Players[j].deck:
         friend = Players[j]
@@ -798,7 +808,14 @@ print('#####################')
 print('king:',f"{king.name}")
 print('target number:', target_num)
 print('giru:', look(giru))
-print('friend_call:',look(friend_call))
+
+revealed = False
+
+if friend_call[0] == 'b':
+    print('friend:', friend_call)
+    revealed = True
+else:
+    print('friend_call:',look(friend_call))
 print()
 
 #player 역할 출력
@@ -848,7 +865,8 @@ def win_sort(giru, first_card_shape): #카드 강한 순서
     
     return li
 
-def win(giru, round, put_li, leadshoot, call = 0): #카드 5장의 승패 정하기, call은 조커
+def win(giru, round, putli, leadshoot, call = 0): #카드 5장의 승패 정하기, call은 조커
+    put_li = putli[:]
     mighty, joker, jokercall = card_change(giru)
     if mighty in put_li:
         return mighty
@@ -865,6 +883,8 @@ def win(giru, round, put_li, leadshoot, call = 0): #카드 5장의 승패 정하
     for i in shapelist(giru):
         if i in put_li:
             return i
+
+
 
 def possible(giru, play_order, round, deck, leadshoot, call = 0): #낼 수 있는 카드
     mighty, joker, jokercall = card_change(giru)
@@ -914,12 +934,14 @@ def possible(giru, play_order, round, deck, leadshoot, call = 0): #낼 수 있�
 
 
 
+
 def gameplay(Players, giru, target_num,king,friend,friend_call): #(마지막에 할거)
+    global revealed
     (mighty, joker, jokercall) = card_change(giru)
     start = Players.index(king)
     eatcard = {p: [] for p in Players}
     eatcard[king] = list(set(pick)&set(score_card))
-    revealed = False
+    
     
     used_card = []
     for i in range(10): #게임 진행
@@ -1010,7 +1032,7 @@ def gameplay(Players, giru, target_num,king,friend,friend_call): #(마지막에 
             print('Run!!')
         print('여당 승리')
         if Players[0].mode == 0:
-            print('player lose!')
+            print('player lose!ㅉㅉ')
         else:
             print('player win!')
             
@@ -1021,7 +1043,7 @@ def gameplay(Players, giru, target_num,king,friend,friend_call): #(마지막에 
         if Players[0].mode == 0:
             print('player win!')
         else:
-            print('player lose!')
+            print('player lose!ㅉㅉ')
     
     print('game end')
 
