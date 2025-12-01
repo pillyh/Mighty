@@ -2,6 +2,8 @@
 #봇 기루바꿀때 deck_evaluate 수정하기
 #누가 몇장 먹었는지 보여주기
 #게임전략 구현
+#기루가 다 돌았는지 확인하고 다 안돌았으면 기루 돌리기
+#짱카 아니면 프렌이 먹기
 
 
 print('♦️ ♠️ ♥️ ♣️')
@@ -198,7 +200,7 @@ class Deck:
                 d.remove(i)
             elif i == 'joker':
                 d.remove(i)
-            elif i in self.topcard(self, giru, pot):
+            elif i in self.topcard(giru, pot):
                 d.remove(i)
         return d
 
@@ -283,9 +285,10 @@ class Player:
             else:
                 print('error')
     
-    def putcard(self, play_order, round, used_card, leadshoot = None, call=0):
+    def putcard_1(self, play_order, round, used_card, di, leadshoot = None, call=0):
         deck = self.deck
         mighty, joker, jokercall = card_change(giru)
+        
         while True:            
             if play_order == 0:
                 print('첫 순서')
@@ -450,7 +453,7 @@ class BOT:
             else:
                 return i
     
-    def putcard(self, play_order, round, used_card, leadshoot = None, call=0):
+    def putcard(self, play_order, round, used_card, di, leadshoot = None, call=0):
         deck = self.deck
         mighty, joker, jokercall = card_change(giru)
         pos = possible(giru, play_order, round, deck, leadshoot, call)
@@ -466,37 +469,101 @@ class BOT:
     
     def __str__(self):
         return self.name
-    
-    def putcard_1(self, play_order, round, used_card, leadshoot = None, call=0):
+
+    def putcard_1(self, play_order, round, used_card, di, leadshoot = None, call=0):
+        #di: 지금까지 나온 카드 dict
         deck = self.deck
         mighty, joker, jokercall = card_change(giru)
         top = Deck(self.deck).topcard(giru, used_card)
         mul = Deck(self.deck).mulcard(giru,used_card)
         gtop = []
-        glist = Deck(deck).girulist(giru)
+        glist = Deck(deck).girulist(giru) 
         for i in top:
             if i in shapelist(giru):
                 gtop.append(i)
         pos = possible(giru, play_order, round, deck, leadshoot, call)
         if len(pos) == 1:
-            return pos[0]
+            n = pos[0]
+            self.deck.remove(pos[0])
+            return n
+        
+        leftgiru = 13 - len(glist) - len(list(set(shapelist(giru))&set(di.values()))) #남은 기루
+        for i in used_card:
+            if i in shapelist(giru):
+                leftgiru -= 1
         
         if self.mode == 2: #주공일때
-            if play_order == 0:
-                if round == 0:
-                    if len(set(top) - set(shapelist(giru))) != 0:
+            if play_order == 0: #선 먹었을 때
+                if round == 0: #초구
+                    if len(set(top) - set(shapelist(giru))) != 0: #기루 아닌 탑카 존재
                         for i in set(top) - set(shapelist(giru)):
+                            print('(확인용) 초구 짱카')
+                            self.deck.remove(i)
+                            return i #그거 내기
+                    else: #짱카 없을때
+                        print('(확인용) 초구 물카')
+                        self.deck.remove(mul[0])
+                        return mul[0] #물패버리기
+                else: #초구 말고
+                    if (friend_call != joker) and (joker not in deck) and (jokercall in deck): #조커콜 있고 조커 없고 프렌 조커 아닐 때
+                        print('(확인용)조커콜')
+                        self.deck.remove(jokercall)
+                        return jokercall + 'Y' #조커콜
+                    elif len(gtop) != 0: #기루짱카 있을때
+                        print('(확인용)기루짱카돌리기')
+                        self.deck.remove(gtop[0])
+                        return gtop[0] #그거 내기
+                    elif len(gtop) == 0: #기루짱카 없을때
+                        if len(glist) != 0:
+                            print('(확인용) 짱카 없어서 물기루 돌림')
+                            self.deck.remove(glist[-1])
+                            return glist[-1] #물기루내기
+                        #else:
+                            
+            elif play_order == 4: #마지막 순서
+                print('(확인용) 주공, 마지막')
+            else: #그냥 중간
+                print('(확인용) 주공, 중간')
+        
+        elif self.mode == 1: #프렌일 때
+            #흠...
+            print('(확인용)프렌')
+        
+        elif self.mode == 0: #야당일 때
+            if play_order == 0: #선 먹었을 때
+                if jokercall in deck and friend_call != mighty: #조커콜
+                    print('(확인용)야당 조커콜')
+                    self.deck.remove(jokercall)
+                    return jokercall + 'Y'
+                elif len(list(set(deck)&set(spadelist))) != 0 and mighty not in used_card: #마공
+                    for i in list(set(deck)&set(spadelist)): #아 문양 바뀌는거 생각해야
+                        print('(확인용)마공')
+                        self.deck.remove(i)
+                        return i
+                elif len(list(set(top)-set(shapelist(giru)))) != 0: #기루 아닌 짱카 있으면
+                    for i in list(set(top)-set(shapelist(giru))):
+                        print('(확인용)짱카')
+                        self.deck.remove(i)
+                        return i
+                else: #뭐 없을 때 기루 아닌거 아무거나
+                    print('(확인용) 뭐 없어서 아무거나')
+                    for i in deck:
+                        if i not in shapelist(giru):
+                            self.deck.remove(i)
                             return i
-                    else:
-                        return mul[0]
-                else:
-                    if (friend_call != joker) and (joker not in deck) and (jokercall in deck):
-                        return jokercall + 'Y'
-                    elif len(gtop) != 0:
-                        return gtop[0]
-                    elif len(gtop) == 0:
-                        return glist[-1]
-    
+            
+            elif play_order == 4: #마지막순서
+                print('(확인용) 마지막 순서일때')
+            
+            else:
+                print('(확인용)중간야당')
+        
+        else:
+            print('???????뭐야 개버그')
+        
+        print('미구현, 랜덤')
+        return self.putcard(play_order, round, used_card, di, leadshoot)
+
 
 
 def gameready(): #Players 빈 리스트 만들고 인원수 따라 gameready5/6 실행
@@ -829,9 +896,10 @@ else:
 
 
 #확인용
-print('(확인용) king:', look(Deck(king.deck).sorted_deck(giru)))
+#print('(확인용) king:', look(Deck(king.deck).sorted_deck(giru)))
 #print('(확인용) friend:', look(Deck(friend.deck).sorted_deck(giru)))
 
+g = input('아무거나 입력하세용')
 
 def card_change(giru):#return (mighty, joker, jokercall)
     joker = 'joker'
@@ -961,11 +1029,12 @@ def gameplay(Players, giru, target_num,king,friend,friend_call): #(마지막에 
         print()
         
         li = [] #한 라운드 돌면서 나온 카드 저장할 리스트
+        di = dict()
         for j in range(5): #한 라운드 돌기
             play_order = j
             if j == 0: #처음 내는 사람
                 
-                put = Players[start].putcard(play_order, round, used_card) #카드내기
+                put = Players[start].putcard_1(play_order, round, used_card, di) #카드내기
                 used_card.append(put)
                 #leadshoot 지정
                 if put[0] == 'j': #조커처리
@@ -980,6 +1049,7 @@ def gameplay(Players, giru, target_num,king,friend,friend_call): #(마지막에 
                 
                 
                 li.append(put)
+                di[Players[start].position(revealed)] = put
                 print(Players[start].position(revealed),':',look(put))
                 if put == friend_call:
                     print(f'{Players[start].name} friend!')
@@ -987,7 +1057,7 @@ def gameplay(Players, giru, target_num,king,friend,friend_call): #(마지막에 
                 used_card.append(put)
                 
             else: #처음 아님: 리드슈트 따라 내기
-                put = Players[start].putcard(play_order, round, used_card, leadshoot, call)
+                put = Players[start].putcard_1(play_order, round, used_card, di, leadshoot, call)
                 
                 li.append(put)
                 print(Players[start].position(revealed),':', look(put))
