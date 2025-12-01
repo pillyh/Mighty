@@ -202,6 +202,8 @@ class Deck:
                 d.remove(i)
             elif i in self.topcard(giru, pot):
                 d.remove(i)
+            elif i in shapelist(giru):
+                d.remove(i)
         return d
 
 class Player:
@@ -487,10 +489,12 @@ class BOT:
             self.deck.remove(pos[0])
             return n
         
+        #남은 기루
         leftgiru = 13 - len(glist) - len(list(set(shapelist(giru))&set(di.values()))) #남은 기루
         for i in used_card:
             if i in shapelist(giru):
                 leftgiru -= 1
+
         
         if self.mode == 2: #주공일때
             if play_order == 0: #선 먹었을 때
@@ -502,18 +506,33 @@ class BOT:
                             return i #그거 내기
                     else: #짱카 없을때
                         print('(확인용) 초구 물카')
+                        rtn = mul[0]
                         self.deck.remove(mul[0])
-                        return mul[0] #물패버리기
+                        
+                        return rtn #물패버리기
                 else: #초구 말고
                     if (friend_call != joker) and (joker not in deck) and (jokercall in deck): #조커콜 있고 조커 없고 프렌 조커 아닐 때
                         print('(확인용)조커콜')
                         self.deck.remove(jokercall)
                         return jokercall + 'Y' #조커콜
+                    elif leftgiru == 0 and deck not in shapelist(giru): #기루 다 돌았고 내 남은게 다 기루가 아닐 때
+                        if len(top) != 0:#짱카 있으면 돌리기
+                            for i in top:
+                                self.deck.remove(i)
+                                print('(확인용) 기루 다 돌려서 짱카냄')
+                                return i
+                        #조커로 세컨기루 돌리기?
+                    
                     elif len(gtop) != 0: #기루짱카 있을때
-                        print('(확인용)기루짱카돌리기')
+                        print('(확인용) 기루짱카돌리기')
                         self.deck.remove(gtop[0])
                         return gtop[0] #그거 내기
                     elif len(gtop) == 0: #기루짱카 없을때
+                        if joker in deck:
+                            print('기루짱 다 돌려서 조커로 기루돌림')
+                            self.deck.remove(joker)
+                            return joker + giru
+                        
                         if len(glist) != 0:
                             print('(확인용) 짱카 없어서 물기루 돌림')
                             self.deck.remove(glist[-1])
@@ -546,7 +565,7 @@ class BOT:
                         self.deck.remove(i)
                         return i
                 else: #뭐 없을 때 기루 아닌거 아무거나
-                    print('(확인용) 뭐 없어서 아무거나')
+                    print('(확인용) 뭐 없어서 기루 아닌거 아무거나')
                     for i in deck:
                         if i not in shapelist(giru):
                             self.deck.remove(i)
@@ -676,7 +695,6 @@ def deck_evaluation(deck): # 패 평가, return (giru, target_num)
     
     target_num = int(target_num)
     return (giru, target_num)
-
 
 #5마, 6마 게임: return (king, friend_call, giru, target_num)
 def gameready5(): 
@@ -1054,7 +1072,7 @@ def gameplay(Players, giru, target_num,king,friend,friend_call): #(마지막에 
                 if put == friend_call:
                     print(f'{Players[start].name} friend!')
                     revealed = True
-                used_card.append(put)
+                
                 
             else: #처음 아님: 리드슈트 따라 내기
                 put = Players[start].putcard_1(play_order, round, used_card, di, leadshoot, call)
