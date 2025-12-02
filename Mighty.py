@@ -2,8 +2,8 @@
 #봇 기루바꿀때 deck_evaluate 수정하기
 #누가 몇장 먹었는지 보여주기
 #게임전략 구현
-#기루가 다 돌았는지 확인하고 다 안돌았으면 기루 돌리기
 #짱카 아니면 프렌이 먹기
+
 
 
 print('♦️ ♠️ ♥️ ♣️')
@@ -474,6 +474,7 @@ class BOT:
 
     def putcard_1(self, play_order, round, used_card, di, leadshoot = None, call=0):
         #di: 지금까지 나온 카드 dict
+        
         deck = self.deck
         mighty, joker, jokercall = card_change(giru)
         top = Deck(self.deck).topcard(giru, used_card)
@@ -483,8 +484,20 @@ class BOT:
         for i in top:
             if i in shapelist(giru):
                 gtop.append(i)
-        pos = possible(giru, play_order, round, deck, leadshoot, call)
-        if len(pos) == 1:
+        
+        totaltop = [] #그냥 문양별 짱카들
+        for i in ['S','D','H','C']:
+            for j in shapelist(i):
+                if j not in used_card:
+                    totaltop.append(j)
+                    break
+        
+        if call == 1 and mighty in deck and joker in deck:
+            self.deck.remove(mighty)
+            return mighty
+        
+        pos = possible(giru, play_order, round, deck, leadshoot, call) #낼 수 있는 카드들
+        if len(pos) == 1: #낼 수 있는게 하나밖에 없으면 그거 내기
             n = pos[0]
             self.deck.remove(pos[0])
             return n
@@ -547,15 +560,32 @@ class BOT:
         elif self.mode == 1: #프렌일 때
             #흠...
             print('(확인용)프렌')
-        
+            if play_order == 0: #선 먹었을 때
+                if joker in deck and leftgiru != 0: #기루 남아있고 나한테 조커있음
+                    print('조커로 기루돌려주는 멋진 프렌')
+                    self.deck.remove(joker)
+                    return joker + giru
+                elif len(gtop) != 0 and leftgiru != 0: #남은기루 있고 나한테 기루짱카있음
+                    print('기루짱카돌려주는멋진프렌')
+                    rtn = gtop[0]
+                    self.deck.remove(rtn)
+                    return rtn
+                elif len(glist) != 0 and leftgiru != 0: #남은기루 있음
+                    rtn = glist[-1]
+                    print('짱카는 아니지만 기루 돌려주는 프렌')
+                    self.deck.remove(rtn)
+                    return rtn
+                else:
+                    print('기루가없는병신프렌')
+                    
         elif self.mode == 0: #야당일 때
             if play_order == 0: #선 먹었을 때
                 if jokercall in deck and friend_call != mighty: #조커콜
                     print('(확인용)야당 조커콜')
                     self.deck.remove(jokercall)
                     return jokercall + 'Y'
-                elif len(list(set(deck)&set(spadelist))) != 0 and mighty not in used_card: #마공
-                    for i in list(set(deck)&set(spadelist)): #아 문양 바뀌는거 생각해야
+                elif len(list(set(deck)&set(shapelist(mighty[0])))) != 0 and mighty not in used_card: #마공
+                    for i in list(set(deck)&set(shapelist(mighty[0]))): 
                         print('(확인용)마공')
                         self.deck.remove(i)
                         return i
@@ -571,11 +601,42 @@ class BOT:
                             self.deck.remove(i)
                             return i
             
-            elif play_order == 4: #마지막순서
-                print('(확인용) 마지막 순서일때')
-            
-            else:
-                print('(확인용)중간야당')
+            else: #선 아닐 때
+                if leadshoot == giru and leftgiru != 0: #기루 아직 다 안 돌아서 돌아갈 때
+                    if list(di.values())[0] in totaltop: #짱기루
+                        if len(glist) != 0:
+                            print('짱기루 돌려서 제일 약한 기루 내기')
+                            rtn = glist[-1]
+                            self.deck.remove(rtn)
+                            return rtn
+                        else:
+                            if len(mul) != 0: #물카 있을때
+                                print('짱기루인데 기루없어서 물카내기')
+                                rtn = mul[0]
+                                self.deck.remove(rtn)
+                                return rtn
+                    else: #짱 아닌 기루
+                        if len(glist) == 0: #기루 없을때
+                            if len(list(set(pos)&set(score_card))) != 0:#낼 수 있는 점카 있을때
+                                rtn = list(set(pos)&set(score_card))[0]
+                                print('(확인용) 물기루 돌 때 나한테 기루 없고 낼 수 있는 점카 있어서 냄')
+                                self.deck.remove(rtn)
+                                return rtn
+                            #else:물기루 도는데 점수가 없음 ㅠㅠ근데 그럼 뭐 암거나 내라
+                        else: #기루 있어
+                            if len(gtop) != 0: #기루짱카 있을때
+                                if len(list(set(pos)-set(gtop))) != 0: #짱카 아닌 기루 있을때
+                                    rtn = list(set(pos)-set(gtop))[0]
+                                    print('기루짱카 아끼고 기루물카내기')
+                                    self.deck.remove(rtn)
+                                    return rtn
+                                else:
+                                    rtn = gtop[-1]
+                                    print('기루가 다 짱카임;;;')
+                                    self.deck.remove(rtn)
+                                    return rtn
+                                
+                        
         
         else:
             print('???????뭐야 개버그')
@@ -876,15 +937,15 @@ king, friend_call, giru, target_num = gameready()
 
 #프렌 반영
 friend = -1
-if friend_call[0] == 'b':
+if friend_call[0] == 'b': #너프렌일 때
     for i in Players:
         if i.name == friend_call:
             friend = i
-for j in range(5):
+for j in range(5): #너프렌 아닐때
     if friend_call in Players[j].deck:
         friend = Players[j]
         break
-if friend != -1:
+if friend != -1: #프렌 있을때 반영
     friend.mode = 1
     
 
