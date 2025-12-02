@@ -4,7 +4,12 @@
 #게임전략 구현
 #짱카 아니면 프렌이 먹기
 
-
+#짱기루 돌아갈때 낮은기루 낸다!
+#낮기루 돌아갈때 점수준다
+#프렌이 기루짱카나 조커 있으면 냅다 기루돌리기 - 완료!!
+#프렌이 기루짱카 없어도 기루돌리기 - 완료!!
+#마공 문양 삽에서 다른거로 바뀌는거 - 완료!!
+#티커가 총맞기 구현 - 완료!!
 
 print('♦️ ♠️ ♥️ ♣️')
 print('Rule')
@@ -488,7 +493,7 @@ class BOT:
         totaltop = [] #그냥 문양별 짱카들
         for i in ['S','D','H','C']:
             for j in shapelist(i):
-                if j not in used_card:
+                if (j not in set(used_card)-set(di.values())) and j != mighty:
                     totaltop.append(j)
                     break
         
